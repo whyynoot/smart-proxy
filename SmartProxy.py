@@ -1,5 +1,7 @@
 import re
 import random
+import threading
+
 import requests
 
 class SmartProxy:
@@ -46,7 +48,7 @@ class SmartProxy:
                           f'Please use ip:port:user:pass format.')
                 counter += 1
             file.close()
-            self.check_proxy()
+            self.__check_proxy()
         except FileNotFoundError:
             print(F"Proxy file with path {path} was not found.")
             raise FileNotFoundError
@@ -65,17 +67,41 @@ class SmartProxy:
         return self.proxy_dict[0]
 
     # AutoMethod to check proxies
-    # Testing link, timeout can be setted in class constructor
-    def __check_proxy(self):
+    # Testing link, timeout can be set in class constructor
+    def __check_proxy(self):# my_thread = []
+        # for proxi in list(proxy):
+        #     my_thread.append(threading.Thread(target=check_proxy, args=(proxi,)))
+        # for thread in my_thread:
+        #     thread.start()
+        # for thread in my_thread:
+        #     thread.join()
+        # print("Finished, Proxies Left:", len(proxy))
+        # proxy_use = True
+        # if len(proxy) == 0:
+        #     proxy_use = False
+
         shadow_copy = self.proxy_dict.copy()
+        threads = []
         for key in shadow_copy.keys():
             try:
-                status_code = requests.get(self.TEST_LINK, proxies=self.proxy_dict[key],
-                                           timeout=self.TIMEOUT).status_code
-                if status_code != self.TEST_STATUS_CODE:
-                    del self.proxy_dict[key]
+                threads.append(threading.Thread(target=self.__check_one_proxy, args=(key,)))
+                for thread in threads:
+                    thread.start()
+                for thread in threads:
+                    thread.join()
             except:
                 del self.proxy_dict[key]
+
+    def __check_one_proxy(self, key):
+        try:
+            status_code = requests.get(self.TEST_LINK, proxies=self.proxy_dict[key],
+                                       timeout=self.TIMEOUT).status_code
+            if status_code != self.TEST_STATUS_CODE:
+                del self.proxy_dict[key]
+        except:
+            del self.proxy_dict[key]
+
+
         print(self.proxy_dict)
 
     # TODO: Manual updating proxy priority
